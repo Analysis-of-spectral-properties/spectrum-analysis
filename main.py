@@ -15,8 +15,8 @@ def testing_hypotheses(tests_count=10_000, metrics=metrics_list,
         h0_count = 0
 
         for _ in range(tests_count):
-            N = np.random.randint(*M_bounds)
-            M = np.random.randint(*N_bounds)
+            M = np.random.randint(*M_bounds)
+            N = np.random.randint(*N_bounds)
             points = np.random.randn(M, N)
 
             distances_matrix = squareform(pdist(points, metric=metric)) ** 2
@@ -29,7 +29,6 @@ def testing_hypotheses(tests_count=10_000, metrics=metrics_list,
             else: print(f"Metric: {metric}, M: {M}, N: {N} \nFiltered Eghenvalues: {filtered_eigenvalues}\n\n")
 
             if h0_count % 1000 == 0: print(h0_count)
-            if ((percentages := h0_count // tests_count) % 10 == 0): print(f"{percentages}%")
 
 
-testing_hypotheses(metrics=['euclidean'], N_bounds=(3, 100))
+testing_hypotheses(metrics=['euclidean'], M_bounds=(99, 100), N_bounds=(99, 100))
