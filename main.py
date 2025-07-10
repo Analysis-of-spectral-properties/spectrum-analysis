@@ -2,48 +2,79 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import squareform, pdist
 from sklearn.manifold import MDS
-from util import Metrics, print_percents
+from util import Metrics, print_percents, percents
 
 
-def testing_hypotheses(tests_count=10_000, metrics=Metrics.Euclidean.value, 
-                       N_bounds=(2, 500), M_bounds=(1, 500), eps=1e-9,
-                       visual_msd=False, make_mds=False, print_eig=False):
+def generate_distances_matrix(N_bounds, M_bounds, metric, p):
+    N = np.random.randint(*N_bounds)
+    M = np.random.randint(*M_bounds)
+    points = np.random.randn(N, M)
+
+    kwargs = {"metric": metric, "p": p} if metric == "minkowski" else {"metric": metric}
+    return squareform(pdist(points, **kwargs)), N, M
+
+def get_eigenvalues(distances_squared_matrix, eps): 
+    eigenvalues = np.linalg.eigh(distances_squared_matrix)[0]
+    filtered_eigenvalues = eigenvalues[np.abs(eigenvalues) >= eps]
+    
+    return eigenvalues, filtered_eigenvalues
+
+
+def print_h0_err_log(metric, N, M, print_eig, filtered_eigenvalues):
+    print(f"Metric: {metric}, N: {N}, M: {M}\n")
+    if print_eig: print(f"Filtered Eghenvalues: {filtered_eigenvalues}\n\n")
+
+def print_h0_results(h0_counts, tests_count, metrics):
+    for i in range(len(h0_counts)): print_percents(h0_counts[i], tests_count, text=f"RESULT for metric {metrics[i]}: ", force=True)
+
+
+def check_h0(filtered_eigenvalues):
+    return np.sum(filtered_eigenvalues < 0) > np.sum(filtered_eigenvalues > 0) 
+
+
+def h0_test(N_bounds, M_bounds, metric, eps, print_eig, p):
     """
     N - count of points
     M - count of coordinates
     """
 
+    distances_matrix, N, M = generate_distances_matrix(N_bounds, M_bounds, metric, p)
+    _, filtered_eigenvalues = get_eigenvalues(distances_matrix ** 2, eps)
+
+    if check_h0(filtered_eigenvalues): return "Success!"
+    else: print_h0_err_log(metric, N, M, print_eig, filtered_eigenvalues)
+
+    return (N, M)
+
+def h0_metric_test(tests_count, N_bounds, M_bounds, metric, eps, print_eig, p):
+    errors = []
+    h0_count = 0
+
+    for _ in range(tests_count):
+        result = h0_test(N_bounds, M_bounds, metric, eps, print_eig, p)
+
+        if result == "Success!": h0_count += 1
+        else: errors.append(result)
+
+        print_percents(h0_count, tests_count, text=f"Metric {metric}: ", parts_count=20)
+
+    return h0_count, errors
+
+def h0_ultimate_test(tests_count=10_000, metrics=Metrics.Good.value, 
+                       N_bounds=(5, 500), M_bounds=(5, 500), eps=1e-9, 
+                       print_eig=False, p=3):
+
+    errors = []
     h0_counts = []
     for metric in metrics:
-        h0_count = 0
-
-        for _ in range(tests_count):
-            N = np.random.randint(*N_bounds)
-            M = np.random.randint(*M_bounds)
-            points = np.random.randn(N, M)
-
-            distances_matrix = squareform(pdist(points, metric=metric))
-            distances_squared_matrix = distances_matrix ** 2
-            eigenvalues = np.linalg.eigh(distances_squared_matrix)[0]
-
-            if make_mds: mds(distances_matrix, visual_msd=visual_msd, metric=metric)
-
-            filtered_eigenvalues = eigenvalues[np.abs(eigenvalues) >= eps]
-
-            if np.sum(filtered_eigenvalues < 0) > np.sum(filtered_eigenvalues > 0): h0_count += 1
-            else: 
-                print(f"Metric: {metric}, N: {N}, M: {M} \n")
-                if print_eig: print(f"Filtered Eghenvalues: {filtered_eigenvalues}\n\n")
-
-
-            print_percents(h0_count, tests_count, text=f"Metric {metric}: ", parts_count=20)
-
+        h0_count, metric_errors = h0_metric_test(tests_count, N_bounds, M_bounds, metric, eps, print_eig, p)
 
         h0_counts.append(h0_count)
+        errors.append(metric_errors)
     
-    
-    for i in range(len(h0_counts)): print_percents(h0_counts[i], tests_count, text=f"RESULT for metric {metrics[i]}: ", force=True)
-        
+    print_h0_results(h0_counts, tests_count, metrics)
+
+    return h0_counts, errors
 
 
 def mds(distances_matrix, K=2, n_init=4, random_state=44, visual_msd=False, metric=''):
@@ -54,13 +85,40 @@ def mds(distances_matrix, K=2, n_init=4, random_state=44, visual_msd=False, metr
     mds = MDS(n_components=K, dissimilarity='precomputed', n_init=n_init, random_state=random_state)
     new_points = mds.fit_transform(distances_matrix)
 
-    if K == 2 and visual_msd: visualisation_2d(new_points, metric)
+    return new_points
 
 
-def visualisation_2d(points, metric=''):
-    plt.scatter(points[:, 0], points[:, 1])
-    plt.title(f"MDS with {metric} metric")
+def mds_test(tests_count=1, metrics=Metrics.Good.value, 
+             N_bounds=(5, 500), M_bounds=(5, 500),
+             K=2, visual_mds=True, p=3):
+    
+    for metric in metrics:
+        for _ in range(tests_count):
+            new_points = mds(generate_distances_matrix(N_bounds, M_bounds, metric, p)[0], K=K)
+            title = f"MDS with {metric} " + (f"p={p} " if metric == "minkowski" else "") + "metric"
+            if K == 2 and visual_mds: visualisation_2d(new_points, title=title)
+
+
+def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y"):
+    plt.scatter(points[:, 0], points[:, 1], s=8, c='purple', alpha=0.5)
+    plt.xlabel(xlabel) 
+    plt.ylabel(ylabel) 
+    plt.title(title)
+    plt.grid(True)
     plt.show()
 
 
-testing_hypotheses(tests_count=100, metrics=Metrics.Not_Euclidean.value, make_mds=False, visual_msd=False)
+# mds_test(metrics=Metrics.Good.value)
+# h0_ultimate_test(tests_count=1000, metrics=Metrics.Minkowski.value, p=3)
+
+arr = []
+for i in range(10, 100): 
+    tests = 10
+    result = h0_ultimate_test(tests_count=tests, metrics=['sqeuclidean'], N_bounds=(i, i + 1), M_bounds=(10, 11))[0][0]
+    arr.append(percents(result, tests))
+print(arr)
+print(np.array((list([1 + (i / 10) for i in range(90)]), arr)))
+visualisation_2d([list([1 + 0.1 * i for i in range(90)]), arr])
+
+# h0_ultimate_test(tests_count=1000, metrics=['mahalanobis'], N_bounds=(200, 250), M_bounds=(1, 200))
+# visualisation_2d(np.array(arr), metric='mahalanobis')
