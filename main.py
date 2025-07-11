@@ -8,6 +8,7 @@ from util import Metrics, print_percents, percents
 def generate_distances_matrix(N_bounds, M_bounds, metric, p):
     N = np.random.randint(*N_bounds)
     M = np.random.randint(*M_bounds)
+    if metric == "mahalanobis" and N <= M: N, M = M + 1, N
     points = np.random.randn(N, M)
 
     kwargs = {"metric": metric, "p": p} if metric == "minkowski" else {"metric": metric}
@@ -109,16 +110,18 @@ def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y"):
 
 
 # mds_test(metrics=Metrics.Good.value)
-# h0_ultimate_test(tests_count=1000, metrics=Metrics.Minkowski.value, p=3)
+# h0_ultimate_test(tests_count=100, metrics=Metrics.Mahalanobis.value)
 
 arr = []
 for i in range(10, 100): 
-    tests = 10
+    tests = 1000
     result = h0_ultimate_test(tests_count=tests, metrics=['sqeuclidean'], N_bounds=(i, i + 1), M_bounds=(10, 11))[0][0]
     arr.append(percents(result, tests))
 print(arr)
-print(np.array((list([1 + (i / 10) for i in range(90)]), arr)))
-visualisation_2d([list([1 + 0.1 * i for i in range(90)]), arr])
+print(np.column_stack(([1 + (i / 10) for i in range(90)], arr)))
+print(np.array(list(zip([1 + (i / 10) for i in range(90)], arr))))
+visualisation_2d(np.array(list(zip([1 + (i / 10) for i in range(90)], arr))))
 
+# это тоже пока нормально не написал
 # h0_ultimate_test(tests_count=1000, metrics=['mahalanobis'], N_bounds=(200, 250), M_bounds=(1, 200))
 # visualisation_2d(np.array(arr), metric='mahalanobis')

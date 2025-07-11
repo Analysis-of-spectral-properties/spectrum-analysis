@@ -4,6 +4,8 @@ from enum import Enum
 metrics_list = ['euclidean',
                 'seuclidean',
                 'chebyshev',
+
+                'mahalanobis',
                 
                 'minkowski',
 
@@ -15,11 +17,10 @@ metrics_list = ['euclidean',
                 'cosine'
                 ]
 
-funny_metrics = ['mahalanobis']
-
 Metrics = Enum('Metrics', [('Good', metrics_list[:3]), 
-                           ('Minkowski', [metrics_list[3]]), 
-                           ('Bad', metrics_list[4:])])
+                           ('Mahalanobis', [metrics_list[3]]),
+                           ('Minkowski', [metrics_list[4]]), 
+                           ('Bad', metrics_list[5:])])
 
 
 def percents(part, all): return round((part / all) * 100, 2)
