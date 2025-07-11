@@ -112,7 +112,7 @@ def ratio_n_m_h0_test(tests_count=100, metric=Metrics.Bad.value[0],
         percents_list.append(percents(h0_count, tests_count))
     
     visualisation_2d(np.array(list(zip([Decimal(i / M) for i in range(*N_bounds, step)], percents_list))), 
-                     title="Зависимость частоты выполнения h0 от N/M", 
+                     title=f"Зависимость частоты выполнения h0 от N/M в {metric} metric", 
                      xlabel="N/M", ylabel="h0, %", s=s, mode=mode)
 
 
@@ -126,11 +126,13 @@ def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y", s=16, mode="
     plt.show()
 
 
+# это тоже пока нормально не написал
+def n_m_errors_test(metric=Metrics.Bad.value[0], N_bounds=(5, 500), M_bounds=(5, 500)):
+    errors = h0_ultimate_test(tests_count=1000, metrics=[metric], N_bounds=N_bounds, M_bounds=M_bounds)[1][0]
+    visualisation_2d(np.array(errors), title=f"Зависимость N от M при неверной h0 в {metric} metric",
+                     xlabel="N", ylabel="M")
+
 # mds_ultimate_test(metrics=Metrics.Good.value)
 # h0_ultimate_test(tests_count=100, metrics=Metrics.Mahalanobis.value)
 # ratio_n_m_h0_test()
-
-# это тоже пока нормально не написал
-# def n_m_errors_test(metric=Metrics.Bad.value[0], N_bounds=(200, 250), M_bounds=(1, 200)):
-#     errors = h0_ultimate_test(tests_count=1000, metrics=[metric], N_bounds=N_bounds, M_bounds=M_bounds)[1][0]
-#     visualisation_2d(np.array(errors), title="Зависимость N от M в ")
+n_m_errors_test()
