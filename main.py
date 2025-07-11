@@ -1,3 +1,4 @@
+from decimal import Decimal
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import squareform, pdist
@@ -47,7 +48,9 @@ def h0_test(N_bounds, M_bounds, metric, eps, print_eig, p):
 
     return (N, M)
 
-def h0_metric_test(tests_count, N_bounds, M_bounds, metric, eps, print_eig, p):
+def h0_metric_test(tests_count=10000, N_bounds=(5, 500), M_bounds=(5, 500), 
+                   metric=Metrics.Good.value[0], eps=1e-9, 
+                   print_eig=False, p=3):
     errors = []
     h0_count = 0
 
@@ -61,7 +64,7 @@ def h0_metric_test(tests_count, N_bounds, M_bounds, metric, eps, print_eig, p):
 
     return h0_count, errors
 
-def h0_ultimate_test(tests_count=10_000, metrics=Metrics.Good.value, 
+def h0_ultimate_test(tests_count=10000, metrics=Metrics.Good.value, 
                        N_bounds=(5, 500), M_bounds=(5, 500), eps=1e-9, 
                        print_eig=False, p=3):
 
@@ -89,7 +92,7 @@ def mds(distances_matrix, K=2, n_init=4, random_state=44, visual_msd=False, metr
     return new_points
 
 
-def mds_test(tests_count=1, metrics=Metrics.Good.value, 
+def mds_ultimate_test(tests_count=1, metrics=Metrics.Good.value, 
              N_bounds=(5, 500), M_bounds=(5, 500),
              K=2, visual_mds=True, p=3):
     
@@ -100,8 +103,22 @@ def mds_test(tests_count=1, metrics=Metrics.Good.value,
             if K == 2 and visual_mds: visualisation_2d(new_points, title=title)
 
 
-def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y"):
-    plt.scatter(points[:, 0], points[:, 1], s=8, c='purple', alpha=0.5)
+def ratio_n_m_h0_test(tests_count=100, metric=Metrics.Bad.value[0],
+                      N_bounds=(10, 100), M=10, step=5, s=32, mode="plot"):
+    percents_list = []
+
+    for i in range(*N_bounds, step): 
+        h0_count = h0_ultimate_test(tests_count=tests_count, metrics=[metric], N_bounds=(i, i + 1), M_bounds=(M, M + 1))[0][0]
+        percents_list.append(percents(h0_count, tests_count))
+    
+    visualisation_2d(np.array(list(zip([Decimal(i / M) for i in range(*N_bounds, step)], percents_list))), 
+                     title="Зависимость частоты выполнения h0 от N/M", 
+                     xlabel="N/M", ylabel="h0, %", s=s, mode=mode)
+
+
+def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y", s=16, mode="scatter"):
+    if mode == "scatter": plt.scatter(points[:, 0], points[:, 1], s=s, c='purple', alpha=0.5)
+    else: plt.plot(points[:, 0], points[:, 1], c='purple', alpha=0.5)
     plt.xlabel(xlabel) 
     plt.ylabel(ylabel) 
     plt.title(title)
@@ -109,19 +126,11 @@ def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y"):
     plt.show()
 
 
-# mds_test(metrics=Metrics.Good.value)
+# mds_ultimate_test(metrics=Metrics.Good.value)
 # h0_ultimate_test(tests_count=100, metrics=Metrics.Mahalanobis.value)
-
-arr = []
-for i in range(10, 100): 
-    tests = 1000
-    result = h0_ultimate_test(tests_count=tests, metrics=['sqeuclidean'], N_bounds=(i, i + 1), M_bounds=(10, 11))[0][0]
-    arr.append(percents(result, tests))
-print(arr)
-print(np.column_stack(([1 + (i / 10) for i in range(90)], arr)))
-print(np.array(list(zip([1 + (i / 10) for i in range(90)], arr))))
-visualisation_2d(np.array(list(zip([1 + (i / 10) for i in range(90)], arr))))
+# ratio_n_m_h0_test()
 
 # это тоже пока нормально не написал
-# h0_ultimate_test(tests_count=1000, metrics=['mahalanobis'], N_bounds=(200, 250), M_bounds=(1, 200))
-# visualisation_2d(np.array(arr), metric='mahalanobis')
+# def n_m_errors_test(metric=Metrics.Bad.value[0], N_bounds=(200, 250), M_bounds=(1, 200)):
+#     errors = h0_ultimate_test(tests_count=1000, metrics=[metric], N_bounds=N_bounds, M_bounds=M_bounds)[1][0]
+#     visualisation_2d(np.array(errors), title="Зависимость N от M в ")
