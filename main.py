@@ -3,33 +3,32 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import squareform, pdist
 from sklearn.manifold import MDS
-from util import Metrics, print_percents, percents
+from util import Metrics, percents, print_h0_results
 from tqdm import tqdm
+# from seer import cmdscale
 
 
-def generate_distances_matrix(N_bounds, M_bounds, metric, p):
+def generate_points(N, M):
+    return np.random.uniform(low=-500, high=500, size=(N, M)) + \
+            20 * np.random.standard_t(13, size =(N, M)) + \
+            20 * (np.random.standard_gamma(4, size=(N, M)) - 4)
+
+
+def generate_distances_matrix(N_bounds, M_bounds, metric, p=3):
     N = np.random.randint(*N_bounds)
     M = np.random.randint(*M_bounds)
     if metric == "mahalanobis" and N <= M: N, M = M + 1, N
-    points = np.random.randn(N, M) + np.random.standard_gamma(N, M) + np.random.standard_t(N, M)
+    points = generate_points(N, M)
 
     kwargs = {"metric": metric, "p": p} if metric == "minkowski" else {"metric": metric}
-    return squareform(pdist(points, **kwargs)), N, M
+    return squareform(pdist(points, **kwargs)), N, M, points
+
 
 def get_eigenvalues(distances_squared_matrix, eps): 
     eigenvalues = np.linalg.eigh(distances_squared_matrix)[0]
     filtered_eigenvalues = eigenvalues[np.abs(eigenvalues) >= eps]
     
     return eigenvalues, filtered_eigenvalues
-
-
-def print_h0_err_log(metric, N, M, print_eig, filtered_eigenvalues):
-    print(f"Metric: {metric}, N: {N}, M: {M}\n")
-    if print_eig: print(f"Filtered Eghenvalues: {filtered_eigenvalues}\n\n")
-
-def print_h0_results(h0_counts, tests_count, metrics):
-    print()
-    for i in range(len(h0_counts)): print_percents(h0_counts[i], tests_count, text=f"RESULT for metric {metrics[i]}: ", force=True)
 
 
 def check_h0(filtered_eigenvalues):
@@ -42,7 +41,7 @@ def h0_test(N_bounds, M_bounds, metric, eps, print_eig, p):
     M - count of coordinates
     """
 
-    distances_matrix, N, M = generate_distances_matrix(N_bounds, M_bounds, metric, p)
+    distances_matrix, N, M, _ = generate_distances_matrix(N_bounds, M_bounds, metric, p)
     _, filtered_eigenvalues = get_eigenvalues(distances_matrix ** 2, eps)
 
     if check_h0(filtered_eigenvalues): return "Success!"
@@ -68,8 +67,6 @@ def h0_metric_test(tests_count=10000, N_bounds=(5, 500), M_bounds=(5, 500),
             progress.update(1)
         else: errors.append(result)
 
-        # print_percents(h0_count, tests_count, text=f"Metric {metric}: ", parts_count=20)
-
     progress.close()
 
     return h0_count, errors
@@ -77,12 +74,12 @@ def h0_metric_test(tests_count=10000, N_bounds=(5, 500), M_bounds=(5, 500),
 
 def h0_ultimate_test(tests_count=10000, metrics=Metrics.Good.value, 
                        N_bounds=(5, 500), M_bounds=(5, 500), eps=1e-9, 
-                       print_eig=False, p=3):
+                       print_eig=False, p=3, disable=False):
 
     errors = []
     h0_counts = []
     for metric in metrics:
-        h0_count, metric_errors = h0_metric_test(tests_count, N_bounds, M_bounds, metric, eps, print_eig, p)
+        h0_count, metric_errors = h0_metric_test(tests_count, N_bounds, M_bounds, metric, eps, print_eig, p, disable)
 
         h0_counts.append(h0_count)
         errors.append(metric_errors)
@@ -144,11 +141,41 @@ def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y", s=16, mode="
     plt.show()
 
 
-# h0_ultimate_test(tests_count=100, metrics=Metrics.Bad.value)
+def cmds(distances_matrix, eps=1e-11):
+    D = distances_matrix ** 2
+    N = D.shape[0]
+
+    H = np.eye(N) - (np.ones((N, N)) / N)
+    B = -0.5 * H @ D @ H
+
+    eigenvalues, eigenvectors = np.linalg.eigh(B)
+    # print(B.shape)
+    # print(eigenvalues, len(eigenvalues[eigenvalues > eps]))
+    eigenvalues_pos = eigenvalues[eigenvalues > eps]
+    U_d = eigenvectors.T[eigenvalues > eps].T
+
+    return U_d @ np.diag(np.sqrt(eigenvalues_pos))
+
+def cmds_test(N_bounds=(5, 10), M_bot=3):
+    N = np.random.randint(*N_bounds)
+    D, _, M, points = generate_distances_matrix(N_bounds=(N, N + 1), M_bounds=(M_bot, N - 1), metric="euclidean")
+    print("N, M: ", N, M)
+    print("Shape: ", D.shape)
+    points_prediction = cmds(D)
+    # print(M)
+    print(f"Gen: {points.shape}, Rec: {points_prediction.shape}")
+    # if (delta := np.sum(D - squareform(pdist(points_prediction, "euclidean")))) > 1e-10: print(delta)
+    return np.sum(points - points_prediction), np.sum(D - squareform(pdist(points_prediction, "euclidean"))), N, M
+
+
+for i in range(1000): print(cmds_test(N_bounds=(10, 500)))
+
+# h0_ultimate_test(tests_count=100000, metrics=Metrics.Good.value[:1], disable=True, eps=1e-12, N_bounds=(1, 6), M_bounds=(1, 9))
 # mds_ultimate_test(metrics=Metrics.Good.value)
 
 # for metric in Metrics.Bad.value: ratio_n_m_h0_test(metric=metric, tests_count=1000, step=2)
 # for metric in Metrics.Bad.value: n_m_errors_test(metric=metric)
 
-ratio_n_m_h0_test(metric="cosine", tests_count=1000)
+# ratio_n_m_h0_test(metric="cosine", tests_count=1000)
 # n_m_errors_test(metric="cosine")
+
