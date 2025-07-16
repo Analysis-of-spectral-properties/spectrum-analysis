@@ -141,7 +141,7 @@ def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y", s=16, mode="
     plt.show()
 
 
-def cmds(distances_matrix, eps=1e-11):
+def cmds(distances_matrix, eps=5e-8):
     D = distances_matrix ** 2
     N = D.shape[0]
 
@@ -156,19 +156,22 @@ def cmds(distances_matrix, eps=1e-11):
 
     return U_d @ np.diag(np.sqrt(eigenvalues_pos))
 
-def cmds_test(N_bounds=(5, 10), M_bot=3):
+def cmds_test(N_bounds=(5, 10), M_bot=3, eps=5e-8):
     N = np.random.randint(*N_bounds)
     D, _, M, points = generate_distances_matrix(N_bounds=(N, N + 1), M_bounds=(M_bot, N - 1), metric="euclidean")
-    print("N, M: ", N, M)
-    print("Shape: ", D.shape)
-    points_prediction = cmds(D)
+    # print("N, M: ", N, M)
+    # print("Shape: ", D.shape)
+    points_prediction = cmds(D, eps=eps)
     # print(M)
-    print(f"Gen: {points.shape}, Rec: {points_prediction.shape}")
-    # if (delta := np.sum(D - squareform(pdist(points_prediction, "euclidean")))) > 1e-10: print(delta)
+    # print(f"Gen: {points.shape}, Rec: {points_prediction.shape}")
+    if (delta := np.sum(D - squareform(pdist(points_prediction, "euclidean")))) > 5e-6: print(delta)
     return np.sum(points - points_prediction), np.sum(D - squareform(pdist(points_prediction, "euclidean"))), N, M
 
 
-for i in range(1000): print(cmds_test(N_bounds=(10, 500)))
+for i in range(10):
+# for i in tqdm(range(1000)): 
+    # cmds_test(N_bounds=(10, 1000), eps=2e-6)
+    print(cmds_test(N_bounds=(2000, 5000), eps=5e-5))
 
 # h0_ultimate_test(tests_count=100000, metrics=Metrics.Good.value[:1], disable=True, eps=1e-12, N_bounds=(1, 6), M_bounds=(1, 9))
 # mds_ultimate_test(metrics=Metrics.Good.value)
