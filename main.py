@@ -145,8 +145,13 @@ def cmds(distances_matrix, eps=5e-8):
     D = distances_matrix ** 2
     N = D.shape[0]
 
-    H = np.eye(N) - (np.ones((N, N)) / N)
-    B = -0.5 * H @ D @ H
+
+    B = D
+    for i in range(N):
+        B[i, :] = D[i, :] - D[i, :].mean()
+    for i in range(N):
+        B[:, i] = B[:, i] - B[:, i].mean()
+    B *= -0.5
 
     eigenvalues, eigenvectors = np.linalg.eigh(B)
     # !!!
@@ -159,8 +164,9 @@ def cmds(distances_matrix, eps=5e-8):
 
 def cmds_test(N_bounds=(5, 10), M_bot=3, tol=1e-12):
     N = np.random.randint(*N_bounds)
+    print("first")
     D, _, M, points = generate_distances_matrix(N_bounds=(N, N + 1), M_bounds=(M_bot, N - 1), metric="euclidean")
-
+    print("second")
     points_prediction = cmds(D, eps=tol *  np.linalg.norm(D, 'fro'))
 
     print(f"Gen: {points.shape}, Rec: {points_prediction.shape}")
@@ -172,10 +178,10 @@ def cmds_test(N_bounds=(5, 10), M_bot=3, tol=1e-12):
     return np.sum(D - rec), np.linalg.norm(D - rec, 'fro') / np.linalg.norm(D, 'fro'), N, M
 
 
-for i in range(10):
+for i in range(1):
 # for i in tqdm(range(1000)): 
     # cmds_test(N_bounds=(10, 1000), eps=2e-6)
-    print(cmds_test(N_bounds=(5000, 10000)))
+    print(cmds_test(N_bounds=(5, 10)))
     print()
 
 # h0_ultimate_test(tests_count=100000, metrics=Metrics.Good.value[:1], disable=True, eps=1e-12, N_bounds=(1, 6), M_bounds=(1, 9))
