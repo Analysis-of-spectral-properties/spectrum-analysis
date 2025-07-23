@@ -9,12 +9,27 @@ from tqdm import tqdm
 
 
 def generate_points(N, M):
+    """
+    Принимает количество точек *N*, 
+    размерность пространства "M"
+    
+    Возвращает рандомные точки.
+    """
+
     return np.random.uniform(low=-500, high=500, size=(N, M)) + \
             20 * np.random.standard_t(13, size =(N, M)) + \
             20 * (np.random.standard_gamma(4, size=(N, M)) - 4)
 
 
 def generate_distances_matrix(N_bounds, M_bounds, metric, p=3):
+    """
+    Принимает границы количества точек *N_bounds*, 
+    границы размерности пространства "M_bounds", 
+    метрику *metric*
+    
+    Возвращает рандомные точки, количество точек, размерность, сами точки.
+    """
+
     N = np.random.randint(*N_bounds)
     M = np.random.randint(*M_bounds)
     if metric == "mahalanobis" and N <= M: N, M = M + 1, N
@@ -25,6 +40,12 @@ def generate_distances_matrix(N_bounds, M_bounds, metric, p=3):
 
 
 def get_eigenvalues(distances_squared_matrix, eps): 
+    """
+    Принимает матрицу расстояний и eps (для отсечения шумовых нулей)
+
+    Возвращает собственные числа и отфильтрованные собственные числа (не нулевые)
+    """
+
     eigenvalues = np.linalg.eigh(distances_squared_matrix)[0]
     filtered_eigenvalues = eigenvalues[np.abs(eigenvalues) >= eps]
     
@@ -32,13 +53,16 @@ def get_eigenvalues(distances_squared_matrix, eps):
 
 
 def check_h0(filtered_eigenvalues):
+    """Проверка гипотезы о том, что количество отрицательных сч больше количества положительных"""
+
     return np.sum(filtered_eigenvalues < 0) > np.sum(filtered_eigenvalues > 0) 
 
 
 def h0_test(N_bounds, M_bounds, metric, eps, print_eig, p):
     """
-    N - count of points
-    M - count of coordinates
+    Генерирует точки, матрицу расстояний и проверяет гипотезу
+
+    Возвращает "Success", если гипотеза подтвердилась, иначе пару кол-ва точек и размерности
     """
 
     distances_matrix, N, M, _ = generate_distances_matrix(N_bounds, M_bounds, metric, p)
@@ -53,6 +77,13 @@ def h0_test(N_bounds, M_bounds, metric, eps, print_eig, p):
 def h0_metric_test(tests_count=10000, N_bounds=(5, 500), M_bounds=(5, 500), 
                    metric=Metrics.Good.value[0], eps=1e-9, print_eig=False, 
                    p=3, disable=False, ncols=90):
+    """
+    Проводит по метрике *tests_count* h0_test
+
+    Возвращает кол-во тестов, когда гипотеза верна, 
+    кортеж из кол-ва точек и размерности матрицы тех тестов, где гипотеза была неверна
+    """
+
     errors = []
     h0_count = 0
 
@@ -75,6 +106,9 @@ def h0_metric_test(tests_count=10000, N_bounds=(5, 500), M_bounds=(5, 500),
 def h0_ultimate_test(tests_count=10000, metrics=Metrics.Good.value, 
                        N_bounds=(5, 500), M_bounds=(5, 500), eps=1e-9, 
                        print_eig=False, p=3, disable=False):
+    """
+    По массиву метрик проводит по каждой *tests_count* h0_test
+    """
 
     errors = []
     h0_counts = []
@@ -91,7 +125,7 @@ def h0_ultimate_test(tests_count=10000, metrics=Metrics.Good.value,
 
 def mds(distances_matrix, K=2, n_init=4, random_state=44, visual_msd=False, metric=''):
     """
-    K - count of coordinates after mds
+    По матрице расстояний производит MDS
     """
 
     mds = MDS(n_components=K, dissimilarity='precomputed', n_init=n_init, random_state=random_state)
@@ -103,6 +137,11 @@ def mds(distances_matrix, K=2, n_init=4, random_state=44, visual_msd=False, metr
 def mds_ultimate_test(tests_count=1, metrics=Metrics.Good.value, 
              N_bounds=(5, 500), M_bounds=(5, 500),
              K=2, visual_mds=True, p=3):
+    """
+    По массиву метрик, для каждой делает *tests_count* MDS
+
+    visual_mds - флаг для визуализации результата
+    """
     
     for metric in metrics:
         for _ in range(tests_count):
@@ -113,6 +152,13 @@ def mds_ultimate_test(tests_count=1, metrics=Metrics.Good.value,
 
 def ratio_n_m_h0_test(tests_count=100, metric=Metrics.Bad.value[0],
                       N_bounds=(10, 100), M=10, step=2, s=32, mode="plot"):
+    """
+    С помощью этой функции можно посмотреть, как с увеличением отношения числа точек 
+    к размерности меняется выполнимость гипотезы
+
+    Пока работает наивно, можно задать границы кол-ва точек, шаг и фиксированную размерность
+    """
+
     percents_list = []
 
     for i in tqdm(range(*N_bounds, step), desc="Progress", ncols=90): 
@@ -132,6 +178,10 @@ def n_m_errors_test(tests_count=1000, metric=Metrics.Bad.value[0], N_bounds=(5, 
 
 
 def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y", s=16, mode="scatter"):
+    """
+    Просто визуализация точек
+    """
+
     if mode == "scatter": plt.scatter(points[:, 0], points[:, 1], s=s, c='purple', alpha=0.5)
     else: plt.plot(points[:, 0], points[:, 1], c='purple', alpha=0.5)
     plt.xlabel(xlabel) 
@@ -142,6 +192,10 @@ def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y", s=16, mode="
 
 
 def cmds(distances_matrix, eps=5e-8):
+    """
+    По матрице расстояний восстанавливает точки в пространстве с Евклидовой метрикой
+    """
+
     D = distances_matrix ** 2
     N = D.shape[0]
 
@@ -163,6 +217,10 @@ def cmds(distances_matrix, eps=5e-8):
     return U_d @ np.diag(np.sqrt(eigenvalues_pos))
 
 def cmds_test(N_bounds=(5, 10), M_bot=3, tol=1e-12):
+    """
+    Тестирует точность и корректность работы cmds, пока не дописано
+    """
+
     N = np.random.randint(*N_bounds)
     print("first")
     D, _, M, points = generate_distances_matrix(N_bounds=(N, N + 1), M_bounds=(M_bot, N - 1), metric="euclidean")
@@ -178,11 +236,16 @@ def cmds_test(N_bounds=(5, 10), M_bot=3, tol=1e-12):
     return np.sum(D - rec), np.linalg.norm(D - rec, 'fro') / np.linalg.norm(D, 'fro'), N, M
 
 
-for i in range(1):
+# for i in range(1):
 # for i in tqdm(range(1000)): 
     # cmds_test(N_bounds=(10, 1000), eps=2e-6)
-    print(cmds_test(N_bounds=(5, 10)))
-    print()
+    # print(cmds_test(N_bounds=(5, 10)))
+    # print()
+
+
+"""
+Ниже находятся примеры применения функций для проверки гипотез
+"""
 
 # h0_ultimate_test(tests_count=100000, metrics=Metrics.Good.value[:1], disable=True, eps=1e-12, N_bounds=(1, 6), M_bounds=(1, 9))
 # mds_ultimate_test(metrics=Metrics.Good.value)
