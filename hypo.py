@@ -115,7 +115,6 @@ def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y", s=16, mode="
 
 def pos_eig(distances_squared_matrix):
     vals, f_vals = get_eigenvalues(distances_squared_matrix, 1e-9 * np.linalg.norm(distances_squared_matrix))
-    print(vals)
     return sum(1 for x in f_vals if x > 0)
 
 def neg_eig(distances_squared_matrix):
@@ -123,10 +122,9 @@ def neg_eig(distances_squared_matrix):
     return sum(1 for x in f_vals if x < 0)
 
 def plus_minus_test(number_of_obj_arr = [2, 5, 10, 20, 100, 200, 500, 1_000], dimension = 2, metric = Metrics.Good.value, p = 3.775):
-    number_arr = [2, 5, 10, 20, 100, 200, 500, 1_000]
     pos_arr = []
     neg_arr = []
-    for num_obj in number_arr:
+    for num_obj in number_of_obj_arr:
         points = generate_points(num_obj, dimension)
         kwargs = {"metric": metric, "p": p} if metric == "minkowski" else {"metric": metric}
         distance_matrix = squareform(pdist(points, **kwargs))
@@ -135,10 +133,10 @@ def plus_minus_test(number_of_obj_arr = [2, 5, 10, 20, 100, 200, 500, 1_000], di
         neg_arr.append(neg_eig(distance_squared_matrix))
         # plt.axvline(x=num_obj, color='gray', linestyle='--', alpha=0.5)
 
-    plt.plot(number_arr, pos_arr, color = "green",
+    plt.plot(number_of_obj_arr, pos_arr, color = "green",
              marker = "o", linestyle = "--", label = "Positive eigenvalues",
              markersize = 3, linewidth = 1)
-    plt.plot(number_arr, neg_arr, color = "red",
+    plt.plot(number_of_obj_arr, neg_arr, color = "red",
              marker = "o", linestyle = "--", label = f"Negative eigenvalues",
              markersize = 3, linewidth = 1)
     plt.grid()
