@@ -113,6 +113,14 @@ def visualisation_2d(points, title="Title", xlabel="X", ylabel="Y", s=16, mode="
     plt.grid(True)
     plt.show()
 
+## Here and below better change fro norm
+## to a eps = N * 2.22e-16 * np.max(eigenvalues)
+## but since we are currently examining 
+## matrices with no more than
+## 5_000 objects we can
+## leave it like that but actually
+## we should improve it later
+
 def pos_eig(distances_squared_matrix):
     vals, f_vals = get_eigenvalues(distances_squared_matrix, 1e-9 * np.linalg.norm(distances_squared_matrix))
     return sum(1 for x in f_vals if x > 0)
@@ -121,7 +129,7 @@ def neg_eig(distances_squared_matrix):
     vals, f_vals = get_eigenvalues(distances_squared_matrix, 1e-9 * np.linalg.norm(distances_squared_matrix))
     return sum(1 for x in f_vals if x < 0)
 
-def plus_minus_test(number_of_obj_arr = [2, 5, 10, 20, 100, 200, 500, 1_000], dimension = 2, metric = Metrics.Good.value, p = 3.775):
+def plus_minus_test(number_of_obj_arr = [2, 5, 10, 20, 100, 200, 500, 1_000, 2_000], dimension = 2, metric = Metrics.Good.value, p = 3.775):
     pos_arr = []
     neg_arr = []
     for num_obj in number_of_obj_arr:
@@ -147,6 +155,6 @@ def plus_minus_test(number_of_obj_arr = [2, 5, 10, 20, 100, 200, 500, 1_000], di
     else:
         plt.title(f"Pos and neg eigs with {metric} metric and dim = {dimension}")
     plt.legend()
-    plt.show()
+    # plt.show()
 
     return pos_arr, neg_arr
